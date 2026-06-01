@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> 가변적인 색채의 - 각성도 시뮬레이터 예시 </title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --isabeline: #F5F0EB;
+    --glossy-gray: #B0ADA8;
+    --saffron: #F5BD29;
+    --bossy-pink: #C2477A;
+    --indigo: #4B5AA0;
+    --bg: #0e0d0c;
+    --surface: #161412;
+    --border: rgba(255,255,255,0.07);
+    --text-primary: #e8e4df;
+    --text-muted: #6b6760;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-x: hidden;
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  header {
+    margin-bottom: 3rem;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(22px, 5vw, 34px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text-primary);
+  }
+
+  h1 span {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .scene-block {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .scene-visual {
+    height: 200px;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    padding: 1.25rem 1.5rem;
+    transition: background-color 0.8s ease;
+  }
+
+  .scene-overlay {
+    position: absolute;
+    inset: 0;
+    transition: backdrop-filter 0.8s ease, background 0.8s ease;
+    pointer-events: none;
+  }
+
+  .scene-text {
+    position: relative;
+    z-index: 1;
+  }
+
+  .scene-level {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 4px;
+    transition: color 0.8s ease;
+  }
+
+  .scene-caption {
+    font-size: 13px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.6);
+    transition: color 0.8s ease;
+    max-width: 400px;
+    line-height: 1.6;
+  }
+
+  .scene-status {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    padding: 4px 10px;
+    border-radius: 2px;
+    border: 1px solid;
+    transition: all 0.8s ease;
+  }
+
+  .slider-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1rem;
+  }
+
+  .slider-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .slider-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    transition: color 0.5s ease;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+    border-radius: 0;
+    cursor: pointer;
+    position: relative;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.5s ease, transform 0.2s ease;
+    border: 2px solid var(--bg);
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  .track-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  .track-labels span {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .palette-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 2.5rem;
+  }
+
+  .air-card {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .air-swatch {
+    height: 60px;
+    transition: background-color 0.8s ease, filter 0.8s ease;
+  }
+
+  .air-meta {
+    padding: 8px;
+    background: var(--surface);
+  }
+
+  .air-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    line-height: 1.3;
+  }
+
+  .air-class {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .desc-block {
+    border-left: 1px solid var(--border);
+    padding: 1rem 1.25rem;
+    transition: border-color 0.8s ease;
+  }
+
+  .desc-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .desc-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.8s ease;
+  }
+
+  .desc-dot-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .desc-text {
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--text-muted);
+    line-height: 1.7;
+    transition: color 0.8s ease;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .progress-bar {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 10%;
+    transition: width 0.5s ease, background 0.8s ease;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<div class="wrapper">
+  <header>
+    <p class="logo">NEUM Corp. — Visual System</p>
+    <h1>각성도 <span>/ Awakening Index</span></h1>
+  </header>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <div class="scene-block">
+    <div class="scene-visual" id="scene-visual">
+      <div class="scene-overlay" id="scene-overlay"></div>
+      <div class="scene-status" id="scene-status">DORMANT</div>
+      <div class="scene-text">
+        <p class="scene-level" id="scene-level">각성도 — 0%</p>
+        <p class="scene-caption" id="scene-caption">구도가 이사벨린 공기를 마시며 걷는 3링 골목</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slider-section">
+    <div class="slider-header">
+      <span class="slider-label">각성도 조절</span>
+      <span class="slider-value" id="slider-val">10</span>
+    </div>
+    <input type="range" id="slider" min="0" max="100" value="10" step="1">
+    <div class="track-labels">
+      <span>통제됨</span>
+      <span>각성 시작</span>
+      <span>완전 각성</span>
+    </div>
+  </div>
+
+  <p class="palette-label">공기 팔레트</p>
+  <div class="palette-grid" id="palette-grid"></div>
+
+  <div class="desc-block" id="desc-block">
+    <div class="desc-indicator">
+      <div class="desc-dot" id="desc-dot"></div>
+      <span class="desc-dot-label" id="desc-dot-label">상태 분석</span>
+    </div>
+    <p class="desc-text" id="desc-text">공기는 통제 성분을 흡수 중. 의심이 싹트기 전에 흐려진다.</p>
+  </div>
+
+  <footer>
+    <span class="footer-text">NEUM Biosensor System v.2247</span>
+    <span class="footer-text" id="footer-status">바이오 모니터링 정상</span>
+  </footer>
+</div>
+
+<script>
+const airColors = [
+  { name: "이사벨린", cls: "하층민", base: [245, 240, 235] },
+  { name: "글로시 그레이", cls: "공용 살포", base: [176, 173, 168] },
+  { name: "블루 인디고", cls: "중산층", base: [75, 90, 160] },
+  { name: "샤프란 골드", cls: "지배층", base: [245, 189, 41] },
+  { name: "보시 핑크", cls: "집행부대", base: [194, 71, 122] },
+];
+
+const stages = [
+  {
+    max: 15,
+    label: "통제됨",
+    status: "DORMANT",
+    statusColor: "#4a4845",
+    caption: "구도가 이사벨린 공기를 마시며 걷는 3링 골목",
+    desc: "공기의 통제 성분을 흡수 중. 의심이 싹트기 전에 흐려진다.",
+    dotLabel: "통제 상태",
+    dotColor: "#4a4845",
+    bgColor: [18, 16, 14],
+    borderColor: "rgba(255,255,255,0.04)",
+    footerStatus: "바이오 모니터링 정상",
+    blur: 3,
+  },
+  {
+    max: 35,
+    label: "불안",
+    status: "UNSTABLE",
+    statusColor: "#6b6760",
+    caption: "뭔가 이상하다는 느낌이 막연하게 떠오름. 글로시 그레이가 맴도는 공용 셔틀 안",
+    desc: "무언가 잘못됐다는 감각이 스치지만, 약물이 곧 흐려놓는다.",
+    dotLabel: "이상 감지 전",
+    dotColor: "#7a7571",
+    bgColor: [20, 18, 22],
+    borderColor: "rgba(255,255,255,0.06)",
+    footerStatus: "바이오 모니터링 정상",
+    blur: 1.5,
+  },
+  {
+    max: 55,
+    label: "각성 시작",
+    status: "ALERT",
+    statusColor: "#8fa0c8",
+    caption: "뭔가가 조금 이상해진 것 같단 막연한 느낌",
+    desc: "채도가 올라오기 시작한다. 세계가 다르게 보임. 니움 시스템이 뇌파 이상을 감지했다.",
+    dotLabel: "이상 감지",
+    dotColor: "#8fa0c8",
+    bgColor: [16, 18, 32],
+    borderColor: "rgba(75,90,160,0.2)",
+    footerStatus: "⚠ 뇌파 이상 감지됨",
+    blur: 0.5,
+  },
+  {
+    max: 75,
+    label: "저항",
+    status: "TRACKED",
+    statusColor: "#d4935a",
+    caption: "4링 환기 터널. 날것의 공기가 새어나오는 곳",
+    desc: "통제되지 않은 공기. 처음으로 진짜 공기를 마시는 순간. 추적이 시작됨.",
+    dotLabel: "추적 대상",
+    dotColor: "#d4935a",
+    bgColor: [22, 14, 10],
+    borderColor: "rgba(212,147,90,0.2)",
+    footerStatus: "⚠ 추적 개시",
+    blur: 0,
+  },
+  {
+    max: 100,
+    label: "완전 각성",
+    status: "ELIMINATED",
+    statusColor: "#c2477a",
+    caption: "니움의 진실을 아는 자의 시야. 이 명료함은 곧 위험을 뜻한다.",
+    desc: "모든 색이 선명하다. 니움이 가장 두려워하는 상태. 즉각 처리 대상.",
+    dotLabel: "즉각 처리 대상",
+    dotColor: "#c2477a",
+    bgColor: [24, 10, 18],
+    borderColor: "rgba(194,71,122,0.3)",
+    footerStatus: "🔴 즉각 처리 대상 분류",
+    blur: 0,
+  },
+];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function desaturate(rgb, sat) {
+  const gray = rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114;
+  return rgb.map(c => Math.round(lerp(gray, c, sat)));
+}
+
+function toRgb(arr) { return `rgb(${arr[0]},${arr[1]},${arr[2]})`; }
+
+function getStage(val) {
+  return stages.find(s => val <= s.max) || stages[stages.length - 1];
+}
+
+function getSaturation(val) {
+  return 0.06 + (val / 100) * 0.94;
+}
+
+const grid = document.getElementById('palette-grid');
+airColors.forEach((air, i) => {
+  const card = document.createElement('div');
+  card.className = 'air-card';
+  card.innerHTML = `
+    <div class="air-swatch" id="swatch-${i}"></div>
+    <div class="air-meta">
+      <div class="air-name">${air.name}</div>
+      <div class="air-class">${air.cls}</div>
+    </div>`;
+  grid.appendChild(card);
+});
+
+const sliderEl = document.getElementById('slider');
+const sliderVal = document.getElementById('slider-val');
+const progressFill = document.getElementById('progress-fill');
+const sceneVisual = document.getElementById('scene-visual');
+const sceneOverlay = document.getElementById('scene-overlay');
+const sceneStatus = document.getElementById('scene-status');
+const sceneLevel = document.getElementById('scene-level');
+const sceneCaption = document.getElementById('scene-caption');
+const descBlock = document.getElementById('desc-block');
+const descDot = document.getElementById('desc-dot');
+const descDotLabel = document.getElementById('desc-dot-label');
+const descText = document.getElementById('desc-text');
+const footerStatus = document.getElementById('footer-status');
+
+function update(val) {
+  const sat = getSaturation(val);
+  const stage = getStage(val);
+
+  sliderVal.textContent = val;
+  sliderVal.style.color = stage.statusColor;
+
+  progressFill.style.width = val + '%';
+  progressFill.style.background = stage.statusColor;
+
+  airColors.forEach((air, i) => {
+    const c = desaturate(air.base, sat);
+    document.getElementById(`swatch-${i}`).style.backgroundColor = toRgb(c);
+  });
+
+  const bg = desaturate(stage.bgColor, 0.15 + sat * 0.6);
+  sceneVisual.style.backgroundColor = toRgb(bg);
+
+  if (stage.blur > 0) {
+    sceneOverlay.style.backdropFilter = `blur(${stage.blur}px)`;
+    sceneOverlay.style.background = `rgba(14,13,12,${0.3 - val * 0.003})`;
+  } else {
+    sceneOverlay.style.backdropFilter = 'none';
+    sceneOverlay.style.background = 'none';
+  }
+
+  sceneStatus.textContent = stage.status;
+  sceneStatus.style.color = stage.statusColor;
+  sceneStatus.style.borderColor = stage.statusColor + '55';
+
+  sceneLevel.textContent = `각성도 — ${val}%`;
+  sceneCaption.textContent = stage.caption;
+
+  descBlock.style.borderColor = stage.borderColor;
+  descDot.style.background = stage.dotColor;
+  descDotLabel.textContent = stage.dotLabel;
+  descDotLabel.style.color = stage.dotColor;
+  descText.textContent = stage.desc;
+  descText.style.color = val > 50 ? 'rgba(232,228,223,0.8)' : '#6b6760';
+
+  footerStatus.textContent = stage.footerStatus;
+  footerStatus.style.color = stage.statusColor;
+
+  document.querySelector('input[type=range]').style.setProperty('--thumb-color', stage.statusColor);
+}
+
+sliderEl.addEventListener('input', e => update(+e.target.value));
+update(10);
+</script>
+</body>
+</html>
